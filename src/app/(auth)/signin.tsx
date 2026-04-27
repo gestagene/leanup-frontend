@@ -16,7 +16,7 @@ export default function Login() {
           resizeMode="contain"
         />
       </View>
-      <View className="flex-1"></View>
+      <View></View>
     </SafeAreaView>
   );
 }
@@ -24,15 +24,15 @@ export default function Login() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#111113'
+    backgroundColor: "#111113",
   },
   logoContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center'
+    justifyContent: "center",
+    alignItems: "center",
   },
   logo: {
     width: 250,
-    height: 250
-  }
-})
+    height: 250,
+  },
+});
