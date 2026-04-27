@@ -3,15 +3,18 @@ export type UserGoal =
   | "lose_weight"
   | "build_muscle"
   | "maintain";
-export type FitnessLevel = "beginner" | "intermediate" | "advanced";
+export type UserFitnessLevel = "beginner" | "intermediate" | "advanced";
+export type UserSex = "male" | "female";
 
 export type UserProfile = {
   id: string;
-  firstName: string;
-  lastName: string;
+  email: string;
+  password: string;
+  name: string;
   age: number;
   height: number;
   weight: number;
-  goal: UserGoal;
-  fitnessLevel: FitnessLevel;
+  sex: UserSex | null;
+  goal: UserGoal | null;
+  fitnessLevel: UserFitnessLevel | null;
 };
