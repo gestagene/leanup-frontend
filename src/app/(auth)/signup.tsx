@@ -1,3 +1,5 @@
+import { authService } from "@/services/auth.service";
+import { userService } from "@/services/user.service";
 import {
   UserCredentials,
   UserFitnessLevel,
@@ -21,6 +23,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SignUp() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const scrolLRef = useRef<ScrollView>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const headers = [
@@ -30,21 +34,39 @@ export default function SignUp() {
     "About You",
     "About You",
     "Create Account",
+    "Account Created",
   ];
+
   const [formData, setFormData] = useState<Omit<UserProfile, "id">>({
-    name: "",
+    first_name: "",
     age: 0,
     height: 0,
     weight: 0,
     sex: null,
     goal: null,
-    fitnessLevel: null,
+    fitness_level: null,
   });
 
   const [credentials, setCredentials] = useState<UserCredentials>({
     email: "",
     password: "",
   });
+
+  const handleSubmit = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      await authService.signUp(credentials.email, credentials.password);
+      const session = await authService.getSession();
+      if (!session) throw new Error("Session Timeout");
+      await userService.createProfile({ id: session.user.id, ...formData });
+      goNext();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const goals: { label: string; value: UserGoal }[] = [
     { label: "General Fitness", value: "general_fitness" },
@@ -64,7 +86,7 @@ export default function SignUp() {
     { label: "Female", value: "female" },
   ];
 
-  const totalPages = 6;
+  const totalPages = 7;
   const { width } = Dimensions.get("window");
   const goNext = () => {
     scrolLRef.current?.scrollTo({
@@ -87,7 +109,6 @@ export default function SignUp() {
   const updateField = (field: keyof Omit<UserProfile, "id">, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.headerContainer}>
@@ -121,10 +142,10 @@ export default function SignUp() {
             <TextInput
               style={[
                 styles.input,
-                formData.name.length > 0 && styles.selected,
+                formData.first_name.length > 0 && styles.selected,
               ]}
-              value={formData.name}
-              onChangeText={() => updateField("name", Text)}
+              value={formData.first_name}
+              onChangeText={(value) => updateField("first_name", value)}
             />
           </View>
         </View>
@@ -170,19 +191,21 @@ export default function SignUp() {
                 key={level.value}
                 style={[
                   styles.section,
-                  formData.fitnessLevel === level.value && styles.selected,
+                  formData.fitness_level === level.value && styles.selected,
                 ]}
-                onPress={() => updateField("fitnessLevel", level.value)}
+                onPress={() => updateField("fitness_level", level.value)}
               >
                 <Text style={styles.sectionText}>{level.label}</Text>
                 <Checkbox
                   color={
-                    formData.fitnessLevel === level.value
+                    formData.fitness_level === level.value
                       ? "#7961c2"
                       : "#ffffff"
                   }
-                  value={formData.fitnessLevel === level.value}
-                  onValueChange={() => updateField("fitnessLevel", level.value)}
+                  value={formData.fitness_level === level.value}
+                  onValueChange={() =>
+                    updateField("fitness_level", level.value)
+                  }
                 />
               </TouchableOpacity>
             ))}
@@ -260,11 +283,39 @@ export default function SignUp() {
           </View>
           <View style={[styles.inputContainer, { marginTop: -8 }]}>
             <Text style={styles.label}>Email Address</Text>
-            <TextInput style={styles.input} value={credentials.email} />
+            <TextInput
+              keyboardType="email-address"
+              autoCapitalize="none"
+              onChangeText={(value) =>
+                setCredentials((prev) => ({ ...prev, email: value }))
+              }
+              style={styles.input}
+              value={credentials.email}
+            />
           </View>
           <View style={[styles.inputContainer, { marginTop: -19 }]}>
             <Text style={styles.label}>Password</Text>
-            <TextInput style={styles.input} value={credentials.password} />
+            <TextInput
+              value={credentials.password}
+              onChangeText={(value) =>
+                setCredentials((prev) => ({ ...prev, password: value }))
+              }
+              secureTextEntry
+              style={styles.input}
+            />
+          </View>
+        </View>
+        <View style={styles.page}>
+          <View style={styles.titleContainer}>
+            <Text style={[styles.title, { fontSize: 24, textAlign: "center" }]}>
+              Let's get to work, {formData.first_name}!
+            </Text>
+          </View>
+          <View style={styles.createdContainer}>
+            <Text style={styles.createdText}>
+              The hardest part is starting and you just did it. We've
+              personalized everything based on your goal.
+            </Text>
           </View>
         </View>
       </ScrollView>
@@ -275,9 +326,18 @@ export default function SignUp() {
             <Ionicons name="arrow-back" size={24} color="white" />
           </View>
         </TouchableOpacity>
-        <TouchableOpacity onPress={goNext} style={styles.nextButton}>
+        <TouchableOpacity
+          onPress={
+            currentPage === totalPages - 2
+              ? handleSubmit
+              : currentPage === totalPages - 1
+              ? () => router.replace("/tabs" as any)
+              : goNext
+          }
+          style={styles.nextButton}
+        >
           <Text style={styles.buttonText}>
-            {currentPage === totalPages - 1 ? "Finish" : "Next"}
+            {currentPage === 5 ? "Finish" : "Next"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -448,5 +508,16 @@ const styles = StyleSheet.create({
   invalidInput: {
     borderColor: "#ba2525",
     borderWidth: 1,
+  },
+  createdContainer: {
+    flex: 1,
+    marginVertical: 16,
+  },
+  createdText: {
+    color: "#e5e5e5",
+    fontSize: 16,
+    letterSpacing: 0.8,
+    textAlign: "center",
+    marginHorizontal: 18,
   },
 });
