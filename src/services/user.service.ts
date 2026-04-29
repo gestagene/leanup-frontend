@@ -3,15 +3,15 @@ import { UserProfile } from "@/types/user.types";
 
 export const userService = {
   createProfile: async (data: UserProfile) => {
-    const { error } = await supabase.from("users").insert({
+    const { data: result, error } = await supabase.from("users").insert({
       id: data.id,
-      first_name: data.firstName,
-      last_name: data.lastName,
+      first_name: data.first_name,
       age: data.age,
+      sex: data.sex,
       height: data.height,
       weight: data.weight,
       goal: data.goal,
-      fitnessLevel: data.fitnessLevel,
+      fitness_level: data.fitness_level,
     });
     if (error) throw error;
   },

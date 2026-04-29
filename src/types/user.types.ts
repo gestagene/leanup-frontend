@@ -1,3 +1,7 @@
+export type UserCredentials = {
+  email: string;
+  password: string;
+};
 export type UserGoal =
   | "general_fitness"
   | "lose_weight"
@@ -8,13 +12,11 @@ export type UserSex = "male" | "female";
 
 export type UserProfile = {
   id: string;
-  email: string;
-  password: string;
-  name: string;
+  first_name: string;
   age: number;
   height: number;
   weight: number;
   sex: UserSex | null;
   goal: UserGoal | null;
-  fitnessLevel: UserFitnessLevel | null;
+  fitness_level: UserFitnessLevel | null;
 };
