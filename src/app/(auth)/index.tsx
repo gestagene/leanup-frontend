@@ -29,7 +29,10 @@ export default function Index() {
         >
           <Text style={styles.buttonText}>GET STARTED</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.secondButton}>
+        <TouchableOpacity
+          onPress={() => router.push("/signin")}
+          style={styles.secondButton}
+        >
           <Text style={styles.existingUser}>Already a user?</Text>
         </TouchableOpacity>
       </View>
