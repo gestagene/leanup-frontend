@@ -5,8 +5,8 @@
   "scripts": {
     "start": "set EXPO_USE_METRO_WORKSPACE_ROOT=1 && expo start --clear",
     "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint"
   },
@@ -18,7 +18,10 @@
     "@supabase/supabase-js": "^2.104.1",
     "babel-preset-expo": "^55.0.18",
     "expo": "~55.0.17",
+    "expo-auth-session": "~55.0.15",
+    "expo-checkbox": "~55.0.4",
     "expo-constants": "~55.0.15",
+    "expo-crypto": "~55.0.14",
     "expo-device": "~55.0.15",
     "expo-font": "~55.0.6",
     "expo-glass-effect": "~55.0.10",

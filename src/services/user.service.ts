@@ -24,4 +24,5 @@ export const userService = {
 
     if (error) throw error;
   },
+  
 };
