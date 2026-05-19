@@ -5,7 +5,7 @@ export const userService = {
   createProfile: async (data: UserProfile) => {
     const { data: result, error } = await supabase.from("users").insert({
       id: data.id,
-      first_name: data.first_name,
+      name: data.name,
       age: data.age,
       sex: data.sex,
       height: data.height,
@@ -20,9 +20,8 @@ export const userService = {
       .from("users")
       .select("*")
       .eq("id", userId)
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
   },
-  
 };

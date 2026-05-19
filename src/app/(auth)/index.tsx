@@ -1,3 +1,4 @@
+import { colors } from "@/constants/colorscheme";
 import { router } from "expo-router";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -43,7 +44,7 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#1a1a1a",
+    backgroundColor: colors.primary,
   },
   logoContainer: {
     flex: 1,
@@ -69,14 +70,14 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   tagline: {
-    color: "#ffffff",
+    color: colors.textPrimary,
     fontSize: 21,
     fontWeight: "400",
     fontStyle: "italic",
     letterSpacing: 1.2,
   },
   taglineSub: {
-    color: "#aaaaaa",
+    color: colors.textSecondary,
     fontSize: 17,
     fontStyle: "italic",
   },

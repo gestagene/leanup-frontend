@@ -1,5 +1,6 @@
+import { colors } from "@/constants/colorscheme";
+import { useAuth } from "@/hooks/useAuth";
 import { authService } from "@/services/auth.service";
-import { userService } from "@/services/user.service";
 import {
   UserCredentials,
   UserFitnessLevel,
@@ -10,8 +11,9 @@ import {
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Checkbox } from "expo-checkbox";
 import { router } from "expo-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Dimensions,
   ScrollView,
   StyleSheet,
@@ -23,6 +25,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SignUp() {
+  const { isEmailConfirmed } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrolLRef = useRef<ScrollView>(null);
@@ -36,9 +39,24 @@ export default function SignUp() {
     "Create Account",
     "Account Created",
   ];
+  const [day, setDay] = useState("");
+  const [month, setMonth] = useState("");
+  const [year, setYear] = useState("");
+  const [created, setIsCreated] = useState(false);
+
+  const calculateAge = (d: string, m: string, y: string) => {
+    const today = new Date();
+    const birthDate = new Date(Number(y), Number(m) - 1, Number(d));
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const md = today.getMonth() - birthDate.getMonth();
+    if (md < 0 || (md === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
 
   const [formData, setFormData] = useState<Omit<UserProfile, "id">>({
-    first_name: "",
+    name: "",
     age: 0,
     height: 0,
     weight: 0,
@@ -56,11 +74,8 @@ export default function SignUp() {
     try {
       setLoading(true);
       setError(null);
-      await authService.signUp(credentials.email, credentials.password);
-      const session = await authService.getSession();
-      if (!session) throw new Error("Session Timeout");
-      await userService.createProfile({ id: session.user.id, ...formData });
-      goNext();
+      await authService.signUp(credentials, formData);
+      setIsCreated(true);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -109,6 +124,72 @@ export default function SignUp() {
   const updateField = (field: keyof Omit<UserProfile, "id">, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
+  const isPageValid = () => {
+    switch (currentPage) {
+      case 0:
+        return formData.name.length > 0;
+      case 1:
+        return formData.goal !== null;
+      case 2:
+        return formData.fitness_level !== null;
+      case 3:
+        return formData.sex !== null && formData.age > 0;
+      case 4:
+        return formData.height > 0 && formData.weight > 0;
+      case 5:
+        return credentials.email.length > 0 && credentials.password.length > 0;
+      default:
+        return true;
+    }
+  };
+
+  const handleNav = () => {
+    if (currentPage === totalPages - 2) {
+      if (created && isEmailConfirmed) {
+        goNext();
+      } else if (!created) {
+        return handleSubmit();
+      }
+      return;
+    }
+
+    if (currentPage === totalPages - 1) {
+      return router.replace("/(tabs)/Home" as any);
+    }
+    goNext();
+  };
+
+  const setDisable = () => {
+    if (loading) {
+      return true;
+    }
+    if (currentPage === totalPages - 2) {
+      if (!created) {
+        return !isPageValid();
+      }
+    }
+    if (currentPage === totalPages - 1) return false;
+    return !isPageValid();
+  };
+
+  const navContent = () => {
+    const isLoading = loading || (created && !isEmailConfirmed);
+    if (isLoading) {
+      return <ActivityIndicator size="large" color="#ffffff" />;
+    }
+    return (
+      <Text style={styles.buttonText}>
+        {currentPage === totalPages - 2 ? "Submit" : "Next"}
+      </Text>
+    );
+  };
+  useEffect(() => {
+    if (created && isEmailConfirmed) {
+      setLoading(false);
+      goNext();
+    }
+  }, [isEmailConfirmed]);
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.headerContainer}>
@@ -135,17 +216,17 @@ export default function SignUp() {
             <Text style={styles.title}>
               First, tell us something about yourself.
             </Text>
-            <Text style={styles.subtitle}>What's your first name?</Text>
+            <Text style={styles.subtitle}>What should we call you?</Text>
           </View>
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Preffered name</Text>
             <TextInput
               style={[
                 styles.input,
-                formData.first_name.length > 0 && styles.selected,
+                formData.name.length > 0 && styles.selected,
               ]}
-              value={formData.first_name}
-              onChangeText={(value) => updateField("first_name", value)}
+              value={formData.name}
+              onChangeText={(value) => updateField("name", value)}
             />
           </View>
         </View>
@@ -236,22 +317,72 @@ export default function SignUp() {
             ))}
           </View>
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>How old are you?</Text>
-            <TextInput
-              keyboardType={"numeric"}
-              style={styles.input}
-              value={formData.age === 0 ? "" : formData.age.toString()}
-              onChangeText={(value) => updateField("age", Number(value))}
-            />
+            <Text style={styles.label}>When is your birth day?</Text>
+            <View style={styles.birthDateContainer}>
+              <View style={styles.birthDate}>
+                <TextInput
+                  value={day}
+                  maxLength={2}
+                  keyboardType={"numeric"}
+                  style={[styles.input, { borderRadius: 5 }]}
+                  onChangeText={(value) => {
+                    const curr = Number(value);
+                    curr > 31 ? setDay("31") : setDay(value);
+
+                    if (value && month && year && year.length === 4) {
+                      updateField("age", calculateAge(value, month, year));
+                    }
+                  }}
+                />
+                <Text style={styles.label}>Day</Text>
+              </View>
+              <View style={styles.birthDate}>
+                <TextInput
+                  value={month}
+                  maxLength={2}
+                  keyboardType={"numeric"}
+                  style={[styles.input, { borderRadius: 5 }]}
+                  onChangeText={(value) => {
+                    const curr = Number(value);
+                    curr > 12 ? setMonth("12") : setMonth(value);
+
+                    if (value && day && year && year.length === 4) {
+                      updateField("age", calculateAge(day, value, year));
+                    }
+                  }}
+                />
+                <Text style={styles.label}>Month</Text>
+              </View>
+              <View style={styles.birthDate}>
+                <TextInput
+                  value={year}
+                  maxLength={4}
+                  keyboardType={"numeric"}
+                  style={[styles.input, { borderRadius: 5 }]}
+                  onChangeText={(value) => {
+                    const curr = Number(value);
+                    const currYear = new Date().getFullYear();
+
+                    curr > currYear
+                      ? setYear(currYear.toString())
+                      : setYear(value);
+                    if (value && day && month && value.length === 4) {
+                      updateField("age", calculateAge(day, month, value));
+                    }
+                  }}
+                />
+                <Text style={styles.label}>Year</Text>
+              </View>
+            </View>
           </View>
         </View>
         <View style={styles.page}>
           <View style={styles.titleContainer}>
-            <Text style={styles.title}>We're almost there!</Text>
+            <Text style={styles.title}>Almost there!</Text>
             <Text style={styles.subtitle}>Just a few final details..</Text>
           </View>
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>How tall are you?</Text>
+            <Text style={styles.label}>Height:</Text>
             <View style={{ flexDirection: "row" }}>
               <TextInput
                 style={[styles.input, { width: "70%" }]}
@@ -263,7 +394,7 @@ export default function SignUp() {
             </View>
           </View>
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>What's your current weight?</Text>
+            <Text style={styles.label}>Weight:</Text>
             <View style={{ flexDirection: "row" }}>
               <TextInput
                 style={[styles.input, { width: "70%" }]}
@@ -278,7 +409,7 @@ export default function SignUp() {
         <View style={styles.page}>
           <View style={styles.titleContainer}>
             <Text style={styles.title}>
-              We're almost finished! Let's create your account.
+              Finally, Let's set up your account.
             </Text>
           </View>
           <View style={[styles.inputContainer, { marginTop: -8 }]}>
@@ -304,11 +435,19 @@ export default function SignUp() {
               style={styles.input}
             />
           </View>
+          {created && (
+            <View style={styles.confirmationContainer}>
+              <Text style={styles.confirmationText}>
+                Confirmation link sent to {credentials.email}.
+              </Text>
+            </View>
+          )}
         </View>
+
         <View style={styles.page}>
           <View style={styles.titleContainer}>
             <Text style={[styles.title, { fontSize: 24, textAlign: "center" }]}>
-              Let's get to work, {formData.first_name}!
+              Let's get to work, {formData.name}!
             </Text>
           </View>
           <View style={styles.createdContainer}>
@@ -321,24 +460,19 @@ export default function SignUp() {
       </ScrollView>
 
       <View style={styles.navContainer}>
-        <TouchableOpacity onPress={goPrev} style={styles.prevButton}>
-          <View style={styles.prevButtonInner}>
-            <Ionicons name="arrow-back" size={24} color="white" />
-          </View>
-        </TouchableOpacity>
+        {currentPage !== totalPages - 1 && (
+          <TouchableOpacity onPress={goPrev} style={styles.prevButton}>
+            <View style={styles.prevButtonInner}>
+              <Ionicons name="arrow-back" size={24} color="white" />
+            </View>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
-          onPress={
-            currentPage === totalPages - 2
-              ? handleSubmit
-              : currentPage === totalPages - 1
-              ? () => router.replace("/tabs" as any)
-              : goNext
-          }
-          style={styles.nextButton}
+          onPress={() => handleNav()}
+          disabled={setDisable()}
+          style={[styles.nextButton, setDisable() && styles.disabledButton]}
         >
-          <Text style={styles.buttonText}>
-            {currentPage === 5 ? "Finish" : "Next"}
-          </Text>
+          {navContent()}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -354,7 +488,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: "#1a1a1a",
+    backgroundColor: colors.primary,
   },
   headerContainer: {
     marginVertical: 12,
@@ -363,28 +497,28 @@ const styles = StyleSheet.create({
   header: {
     fontSize: 18,
     minWidth: 300,
-    color: "#cccccc",
+    color: colors.textSecondary,
     textAlign: "center",
   },
   titleContainer: {
-    marginTop: 40,
+    marginTop: 30,
     paddingHorizontal: 14,
     width: "100%",
   },
   title: {
-    color: "#ffffff",
+    color: colors.textPrimary,
     fontSize: 17,
     fontWeight: "800",
     marginBottom: 5,
     letterSpacing: 0.8,
   },
   subtitle: {
-    color: "#cecece",
+    color: colors.textSecondary,
     fontSize: 14,
     letterSpacing: 0.8,
   },
   label: {
-    color: "#cccccc",
+    color: colors.textSecondary,
     fontSize: 12,
     letterSpacing: 0.8,
     fontWeight: 700,
@@ -398,13 +532,13 @@ const styles = StyleSheet.create({
   },
   input: {
     alignSelf: "center",
-    backgroundColor: "#1a1a1a",
+    backgroundColor: colors.secondary,
     color: "#ffffff",
     borderRadius: 10,
     padding: 14,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: "#333",
+    borderColor: colors.border,
     width: "100%",
   },
   progressBarContainer: {
@@ -436,6 +570,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "white",
     fontSize: 17,
+    fontWeight: 800,
     paddingHorizontal: 50,
     paddingVertical: 14,
     backgroundColor: "#7961c2",
@@ -483,7 +618,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#2a2a2a",
     borderRadius: 10,
-    padding: 14,
+    padding: 12,
     borderWidth: 1,
     borderColor: "#333",
     alignItems: "center",
@@ -519,5 +654,29 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     textAlign: "center",
     marginHorizontal: 18,
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  birthDateContainer: {
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    flexDirection: "row",
+    gap: 4,
+  },
+  birthDate: {
+    flex: 1,
+    flexDirection: "column",
+    gap: 6,
+    alignItems: "center",
+  },
+  confirmationContainer: {
+    paddingVertical: 10,
+  },
+  confirmationText: {
+    color: "#00D100",
+    fontSize: 12,
+    letterSpacing: 0.6,
+    textAlign: "center",
   },
 });

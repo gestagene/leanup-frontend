@@ -12,7 +12,7 @@ export type UserSex = "male" | "female";
 
 export type UserProfile = {
   id: string;
-  first_name: string;
+  name: string;
   age: number;
   height: number;
   weight: number;
