@@ -1,5 +1,6 @@
 import CalorieRing from "@/components/CalorieRing";
 import Header from "@/components/Header";
+import ProgressBar from "@/components/ProgressBar";
 import { colors } from "@/constants/colorscheme";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -10,56 +11,164 @@ export default function Nutrition() {
     <SafeAreaView style={styles.container}>
       <Header content="CALORIES" />
       <View style={styles.main}>
-        <View style={styles.header}>
-          <Text style={[styles.headerText]}>Summary</Text>
+        <View style={{ marginTop: 12, marginBottom: 5, marginHorizontal: 6 }}>
+          <Text style={styles.headerText}>Nutrition Overview</Text>
         </View>
-
-        <View style={styles.section}>
-          <View style={styles.summaryContainer}>
-            <View style={styles.summaryLeft}>
-              <Text style={[styles.headerText, { opacity: 0.75 }]}>
+        <View
+          style={[
+            styles.card,
+            {
+              width: "100%",
+              padding: 12,
+            },
+          ]}
+        >
+          {/*Texts*/}
+          <View
+            style={{ justifyContent: "space-around", flexDirection: "row" }}
+          >
+            <View>
+              <Text style={[styles.headerText, { textAlign: "left" }]}>
                 Calories
               </Text>
-              <CalorieRing
-                calories={10}
-                maxCalories={1000}
-                protein={50}
-                carbs={50}
-                fats={50}
-              />
             </View>
-            <View style={styles.summaryRight}>
-              <Text style={styles.headerText}></Text>
+            <View
+              style={{
+                flexDirection: "row",
+                gap: 8,
+              }}
+            >
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+              >
+                <View
+                  style={{
+                    height: 3,
+                    width: 3,
+                    backgroundColor: "#3B82F6",
+                  }}
+                ></View>
+                <Text
+                  style={[styles.text, { fontWeight: "600", color: "#3B82F6" }]}
+                >
+                  Protein
+                </Text>
+              </View>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+              >
+                <View
+                  style={{
+                    height: 3,
+                    width: 3,
+                    backgroundColor: "#F59E0B",
+                  }}
+                ></View>
+                <Text
+                  style={[styles.text, { fontWeight: "600", color: "#F59E0B" }]}
+                >
+                  Carbs
+                </Text>
+              </View>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+              >
+                <View
+                  style={{
+                    height: 3,
+                    width: 3,
+                    backgroundColor: "#EF4444",
+                  }}
+                ></View>
+                <Text
+                  style={[styles.text, { fontWeight: "600", color: "#EF4444" }]}
+                >
+                  Fats
+                </Text>
+              </View>
+            </View>
+          </View>
+          {/*Graphs*/}
+          <View
+            style={{
+              alignItems: "center",
+              paddingVertical: 10,
+              flexDirection: "row",
+              gap: 16,
+            }}
+          >
+            <CalorieRing
+              calories={1000}
+              maxCalories={1500}
+              protein={20}
+              carbs={20}
+              fats={20}
+            />
+            <View style={{ flex: 1 }}>
+              <View style={{ marginVertical: 8 }}>
+                <View style={[styles.section]}>
+                  <Text style={[styles.text, { marginBottom: 4 }]}>
+                    0 / 145
+                  </Text>
+                  <ProgressBar target={8} value={1} color={"#3B82F6"} />
+                </View>
+                <View style={[styles.section]}>
+                  <Text style={[styles.text, { marginBottom: 4 }]}>0</Text>
+                  <ProgressBar target={8} value={1} color={"#F59E0B"} />
+                </View>
+                <View style={[styles.section, { gap: 2 }]}>
+                  <Text style={[styles.text, { marginBottom: 4 }]}>0</Text>
+                  <ProgressBar target={2} value={1} color={"#EF4444"} />
+                </View>
+              </View>
             </View>
           </View>
         </View>
-
         <View style={styles.section}>
+          {/*Label*/}
           <Text style={styles.sectionLabel}>Meal Tracker</Text>
           <View style={styles.cardWrapper}>
-            <View style={[styles.card, { flex: 3 }]}>
+            <View
+              style={[
+                styles.card,
+                {
+                  flex: 2,
+                  height: 45,
+                  justifyContent: "center",
+                  alignItems: "center",
+                },
+              ]}
+            >
               <Text
                 style={[
-                  styles.sectionLabel,
-                  { textAlign: "center", fontWeight: "900", opacity: 0.75 },
+                  styles.text,
+                  {
+                    fontSize: 16,
+                    fontWeight: "900",
+                  },
                 ]}
               >
                 LOG FOOD
               </Text>
             </View>
             <TouchableOpacity
-              style={[styles.card, { flex: 1, backgroundColor: colors.accent }]}
+              style={[
+                styles.card,
+                {
+                  flex: 1,
+                  justifyContent: "center",
+                  alignItems: "center",
+                  backgroundColor: colors.accent,
+                  height: 45,
+                },
+              ]}
             >
               <Ionicons name="add" size={30} color="white" />
             </TouchableOpacity>
           </View>
         </View>
-
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Recent Logs</Text>
-          <View style={styles.cardWrapper}>
-            <View style={styles.card}></View>
-          </View>
+          <Text style={styles.sectionLabel}>Recent Meals</Text>
         </View>
       </View>
     </SafeAreaView>
@@ -91,14 +200,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     fontWeight: 800,
   },
-  normalText: {
-    color: colors.textSecondary,
-    fontSize: 11,
-    letterSpacing: 0.5,
-    textAlign: "center",
-    fontWeight: 300,
-  },
+
   summaryContainer: {
+    flex: 1,
     flexDirection: "row",
     justifyContent: "space-between",
   },
@@ -108,11 +212,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   summaryRight: {
+    flex: 1,
     flexDirection: "column",
     justifyContent: "center",
   },
   section: {
-    marginBottom: 10,
+    marginVertical: 6,
   },
   sectionLabel: {
     fontSize: 13,
@@ -128,11 +233,16 @@ const styles = StyleSheet.create({
     gap: "2%",
   },
   card: {
-    flex: 1,
     backgroundColor: colors.tertiary,
-    height: 45,
+    width: 285,
+    height: 200,
     borderRadius: 6,
-    alignItems: "center",
-    justifyContent: "center",
+    marginVertical: 4,
+  },
+  text: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    letterSpacing: 0.5,
+    fontWeight: 300,
   },
 });

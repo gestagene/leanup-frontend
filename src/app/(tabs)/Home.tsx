@@ -43,18 +43,165 @@ export default function Home() {
           <View
             style={[
               styles.card,
-              { width: 300, justifyContent: "center", alignItems: "center" },
+              {
+                width: 300,
+                padding: 12,
+              },
             ]}
           >
-            <CalorieRing
-              calories={1000}
-              maxCalories={1500}
-              protein={20}
-              carbs={20}
-              fats={20}
-            />
+            {/*Texts*/}
+            <View>
+              <Text style={[styles.headerText, { textAlign: "left" }]}>
+                Calories
+              </Text>
+              <Text style={[styles.text, { textAlign: "left" }]}>
+                Remaining = Goal - Calories
+              </Text>
+            </View>
+            {/*Graphs*/}
+            <View
+              style={{
+                justifyContent: "space-around",
+                alignItems: "center",
+                paddingVertical: 10,
+                flexDirection: "row",
+              }}
+            >
+              <View>
+                <CalorieRing
+                  calories={1000}
+                  maxCalories={1500}
+                  protein={20}
+                  carbs={20}
+                  fats={20}
+                />
+              </View>
+              <View style={{ gap: 8 }}>
+                <View
+                  style={{ flexDirection: "row", gap: 8, alignItems: "center" }}
+                >
+                  <Ionicons name="flag" size={24} color={"#3B82F6"} />
+                  <View style={{ flexDirection: "column", gap: 2 }}>
+                    <Text style={styles.text}>Base Goal</Text>
+                    <Text style={[styles.text, { fontWeight: "900" }]}>0</Text>
+                  </View>
+                </View>
+                <View
+                  style={{ flexDirection: "row", gap: 8, alignItems: "center" }}
+                >
+                  <FontAwesome6 name="utensils" size={24} color={"#FB923C"} />
+                  <View style={{ flexDirection: "column", gap: 2 }}>
+                    <Text style={styles.text}>Food</Text>
+                    <Text style={[styles.text, { fontWeight: "900" }]}>0</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
           </View>
-          <View style={[styles.card, { width: 300 }]}></View>
+          <View
+            style={[
+              styles.card,
+              {
+                width: 300,
+                padding: 12,
+              },
+            ]}
+          >
+            {/*Text*/}
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-around",
+              }}
+            >
+              <View>
+                <Text style={[styles.headerText, { textAlign: "left" }]}>
+                  Macros
+                </Text>
+              </View>
+              {/*legend*/}
+              <View
+                style={{
+                  flexDirection: "row",
+                  gap: 8,
+                }}
+              >
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+                >
+                  <View
+                    style={{
+                      height: 3,
+                      width: 3,
+                      backgroundColor: "#3B82F6",
+                    }}
+                  ></View>
+                  <Text
+                    style={[
+                      styles.text,
+                      { fontWeight: "600", color: "#3B82F6" },
+                    ]}
+                  >
+                    Protein
+                  </Text>
+                </View>
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+                >
+                  <View
+                    style={{
+                      height: 3,
+                      width: 3,
+                      backgroundColor: "#F59E0B",
+                    }}
+                  ></View>
+                  <Text
+                    style={[
+                      styles.text,
+                      { fontWeight: "600", color: "#F59E0B" },
+                    ]}
+                  >
+                    Carbs
+                  </Text>
+                </View>
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+                >
+                  <View
+                    style={{
+                      height: 3,
+                      width: 3,
+                      backgroundColor: "#EF4444",
+                    }}
+                  ></View>
+                  <Text
+                    style={[
+                      styles.text,
+                      { fontWeight: "600", color: "#EF4444" },
+                    ]}
+                  >
+                    Fats
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={{ marginVertical: 8 }}>
+              <View style={[styles.section]}>
+                <Text style={[styles.text, { marginBottom: 4 }]}>0 / 145</Text>
+                <ProgressBar target={8} value={cups} color={"#F59E0B"} />
+              </View>
+              <View style={[styles.section]}>
+                <Text style={[styles.text, { marginBottom: 4 }]}>0</Text>
+                <ProgressBar target={8} value={cups} color={"#F59E0B"} />
+              </View>
+              <View style={[styles.section, { gap: 2 }]}>
+                <Text style={[styles.text, { marginBottom: 4 }]}>0</Text>
+                <ProgressBar target={2} value={cups} color={"#EF4444"} />
+              </View>
+            </View>
+          </View>
         </ScrollView>
         <View
           style={[
@@ -83,7 +230,7 @@ export default function Home() {
           <Text
             adjustsFontSizeToFit
             numberOfLines={1}
-            style={styles.normalText}
+            style={[styles.text, { textAlign: "center" }]}
           >
             Train each muscle group 2× per week for faster growth.
           </Text>
@@ -264,11 +411,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     fontWeight: 800,
   },
-  normalText: {
+  text: {
     color: colors.textSecondary,
-    fontSize: 11,
+    fontSize: 12,
     letterSpacing: 0.5,
-    textAlign: "center",
     fontWeight: 300,
   },
   card: {
