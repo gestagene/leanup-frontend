@@ -16,7 +16,7 @@ export default function CalorieRing({
   carbs,
   fats,
 }: RingProps) {
-  const size = 125;
+  const size = 130;
   const strokeWidth = 6;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -69,7 +69,7 @@ export default function CalorieRing({
           justifyContent: "center",
         }}
       >
-        <Text style={{ color: "#fff", fontSize: 32, fontWeight: "700" }}>
+        <Text style={{ color: "#fff", fontSize: 24, fontWeight: "700" }}>
           {remaining}
         </Text>
         <Text
