@@ -190,7 +190,7 @@ export default function Home() {
             <View style={{ marginVertical: 8 }}>
               <View style={[styles.section]}>
                 <Text style={[styles.text, { marginBottom: 4 }]}>0 / 145</Text>
-                <ProgressBar target={8} value={cups} color={"#F59E0B"} />
+                <ProgressBar target={8} value={cups} color={"#3B82F6"} />
               </View>
               <View style={[styles.section]}>
                 <Text style={[styles.text, { marginBottom: 4 }]}>0</Text>
@@ -325,7 +325,7 @@ export default function Home() {
                   </Text>
                 </View>
               </View>
-              <ProgressBar target={8} value={cups} />
+              <ProgressBar target={8} value={cups} color={"#21547D"} />
             </View>
             {/* Steps */}
             <View
