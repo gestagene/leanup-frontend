@@ -16,8 +16,8 @@ export default function CalorieRing({
   carbs,
   fats,
 }: RingProps) {
-  const size = 160;
-  const strokeWidth = 12;
+  const size = 125;
+  const strokeWidth = 6;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
 
