@@ -1,27 +1,15 @@
-import { supabase } from "@/lib/supabase";
+import { apiClient } from "@/lib/apiClient";
 import { UserProfile } from "@/types/user.types";
 
 export const userService = {
-  createProfile: async (data: UserProfile) => {
-    const { data: result, error } = await supabase.from("users").insert({
-      id: data.id,
-      name: data.name,
-      age: data.age,
-      sex: data.sex,
-      height: data.height,
-      weight: data.weight,
-      goal: data.goal,
-      fitness_level: data.fitness_level,
-    });
-    if (error) throw error;
+  getProfile: async () => {
+    return await apiClient("/users/me");
   },
-  getProfile: async (userId: string) => {
-    const { data, error } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", userId)
-      .maybeSingle();
 
-    if (error) throw error;
+  updateProfile: async (updates: Partial<Omit<UserProfile, "id">>) => {
+    return await apiClient("/users/me", {
+      method: "PUT",
+      body: JSON.stringify(updates),
+    });
   },
 };

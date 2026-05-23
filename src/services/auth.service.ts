@@ -1,3 +1,4 @@
+import { apiClient } from "@/lib/apiClient"; // we'll create this
 import { supabase } from "@/lib/supabase";
 import { UserCredentials, UserProfile } from "@/types/user.types";
 
@@ -12,25 +13,33 @@ export const authService = {
 
   signUp: async (
     credentials: UserCredentials,
-    profile: Omit<UserProfile, "id">
+    profile: Omit<UserProfile, "id">,
   ) => {
     const { data, error } = await supabase.auth.signUp({
       email: credentials.email,
       password: credentials.password,
-      options: {
-        data: {
+    });
+    if (error) throw error;
+
+    const token = data.session?.access_token;
+    if (!token) throw new Error("No session token after signup");
+
+    await apiClient(
+      "/auth/signup",
+      {
+        method: "POST",
+        body: JSON.stringify({
           name: profile.name,
           age: profile.age,
+          height: profile.height,
+          weight: profile.weight,
           sex: profile.sex,
           goal: profile.goal,
           fitness_level: profile.fitness_level,
-          height: profile.height,
-          weight: profile.weight,
-        },
+        }),
       },
-    });
-    console.log("signUp result:", data, error);
-    if (error) throw error;
+      token,
+    );
   },
 
   signOut: async () => {
