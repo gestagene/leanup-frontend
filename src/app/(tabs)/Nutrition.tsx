@@ -2,52 +2,160 @@ import CalorieRing from "@/components/CalorieRing";
 import Header from "@/components/Header";
 import ProgressBar from "@/components/ProgressBar";
 import { colors } from "@/constants/colorscheme";
+import { nutritionService } from "@/services/nutrition.service";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+type NutritionSummary = {
+  total_calories: number;
+  total_protein: number;
+  total_carbs: number;
+  total_fats: number;
+};
+
+type FoodSearchResult = {
+  food_name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+};
+
+type MealLog = {
+  id: string;
+  food_name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+  meal_type: string;
+  logged_at: string;
+};
+
+const CALORIE_GOAL = 2000;
+const MACRO_GOALS = { protein: 145, carbs: 200, fats: 65 };
+
 export default function Nutrition() {
+  const [summary, setSummary] = useState<NutritionSummary>({
+    total_calories: 0,
+    total_protein: 0,
+    total_carbs: 0,
+    total_fats: 0,
+  });
+  const [logs, setLogs] = useState<MealLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<FoodSearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [logging, setLogging] = useState(false);
+
+  const fetchData = async () => {
+    try {
+      const [summaryData, logsData] = await Promise.all([
+        nutritionService.getTodaySummary(),
+        nutritionService.getLogs(),
+      ]);
+      setSummary(summaryData);
+      setLogs(logsData);
+    } catch (error) {
+      console.error("Failed to fetch nutrition data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+    try {
+      setSearching(true);
+      const data = await nutritionService.searchFood(searchQuery);
+      setSearchResults(data.results);
+    } catch (error) {
+      console.error("Search failed:", error);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleLogFood = async (food: FoodSearchResult) => {
+    try {
+      setLogging(true);
+      await nutritionService.logMeal({
+        food_name: food.food_name,
+        calories: food.calories,
+        protein: food.protein,
+        carbs: food.carbs,
+        fats: food.fats,
+        meal_type: "snack",
+      });
+      setModalVisible(false);
+      setSearchQuery("");
+      setSearchResults([]);
+      await fetchData(); // refresh summary and logs
+    } catch (error) {
+      console.error("Failed to log food:", error);
+    } finally {
+      setLogging(false);
+    }
+  };
+
+  const handleDeleteLog = async (logId: string) => {
+    try {
+      await nutritionService.deleteLog(logId);
+      await fetchData();
+    } catch (error) {
+      console.error("Failed to delete log:", error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ActivityIndicator size="large" color={colors.accent} />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <Header content="CALORIES" />
-      <View style={styles.main}>
+      <ScrollView style={styles.main}>
         <View style={{ marginTop: 12, marginBottom: 5, marginHorizontal: 6 }}>
           <Text style={styles.headerText}>Nutrition Overview</Text>
         </View>
-        <View
-          style={[
-            styles.card,
-            {
-              width: "100%",
-              padding: 12,
-            },
-          ]}
-        >
-          {/*Texts*/}
+
+        {/* Calorie + Macro Card */}
+        <View style={[styles.card, { width: "100%", padding: 12 }]}>
           <View
             style={{ justifyContent: "space-around", flexDirection: "row" }}
           >
-            <View>
-              <Text style={[styles.headerText, { textAlign: "left" }]}>
-                Calories
-              </Text>
-            </View>
-            <View
-              style={{
-                flexDirection: "row",
-                gap: 8,
-              }}
-            >
+            <Text style={[styles.headerText, { textAlign: "left" }]}>
+              Calories
+            </Text>
+            <View style={{ flexDirection: "row", gap: 8 }}>
               <View
                 style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
               >
                 <View
-                  style={{
-                    height: 3,
-                    width: 3,
-                    backgroundColor: "#3B82F6",
-                  }}
-                ></View>
+                  style={{ height: 3, width: 3, backgroundColor: "#3B82F6" }}
+                />
                 <Text
                   style={[styles.text, { fontWeight: "600", color: "#3B82F6" }]}
                 >
@@ -58,12 +166,8 @@ export default function Nutrition() {
                 style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
               >
                 <View
-                  style={{
-                    height: 3,
-                    width: 3,
-                    backgroundColor: "#F59E0B",
-                  }}
-                ></View>
+                  style={{ height: 3, width: 3, backgroundColor: "#F59E0B" }}
+                />
                 <Text
                   style={[styles.text, { fontWeight: "600", color: "#F59E0B" }]}
                 >
@@ -74,12 +178,8 @@ export default function Nutrition() {
                 style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
               >
                 <View
-                  style={{
-                    height: 3,
-                    width: 3,
-                    backgroundColor: "#EF4444",
-                  }}
-                ></View>
+                  style={{ height: 3, width: 3, backgroundColor: "#EF4444" }}
+                />
                 <Text
                   style={[styles.text, { fontWeight: "600", color: "#EF4444" }]}
                 >
@@ -88,7 +188,7 @@ export default function Nutrition() {
               </View>
             </View>
           </View>
-          {/*Graphs*/}
+
           <View
             style={{
               alignItems: "center",
@@ -98,34 +198,51 @@ export default function Nutrition() {
             }}
           >
             <CalorieRing
-              calories={1000}
-              maxCalories={1500}
-              protein={20}
-              carbs={20}
-              fats={20}
+              calories={summary.total_calories}
+              maxCalories={CALORIE_GOAL}
+              protein={summary.total_protein}
+              carbs={summary.total_carbs}
+              fats={summary.total_fats}
             />
             <View style={{ flex: 1 }}>
               <View style={{ marginVertical: 8 }}>
-                <View style={[styles.section]}>
+                <View style={styles.section}>
                   <Text style={[styles.text, { marginBottom: 4 }]}>
-                    0 / 145
+                    {summary.total_protein}g / {MACRO_GOALS.protein}g
                   </Text>
-                  <ProgressBar target={8} value={1} color={"#3B82F6"} />
+                  <ProgressBar
+                    target={MACRO_GOALS.protein}
+                    value={summary.total_protein}
+                    color={"#3B82F6"}
+                  />
                 </View>
-                <View style={[styles.section]}>
-                  <Text style={[styles.text, { marginBottom: 4 }]}>0</Text>
-                  <ProgressBar target={8} value={1} color={"#F59E0B"} />
+                <View style={styles.section}>
+                  <Text style={[styles.text, { marginBottom: 4 }]}>
+                    {summary.total_carbs}g / {MACRO_GOALS.carbs}g
+                  </Text>
+                  <ProgressBar
+                    target={MACRO_GOALS.carbs}
+                    value={summary.total_carbs}
+                    color={"#F59E0B"}
+                  />
                 </View>
                 <View style={[styles.section, { gap: 2 }]}>
-                  <Text style={[styles.text, { marginBottom: 4 }]}>0</Text>
-                  <ProgressBar target={2} value={1} color={"#EF4444"} />
+                  <Text style={[styles.text, { marginBottom: 4 }]}>
+                    {summary.total_fats}g / {MACRO_GOALS.fats}g
+                  </Text>
+                  <ProgressBar
+                    target={MACRO_GOALS.fats}
+                    value={summary.total_fats}
+                    color={"#EF4444"}
+                  />
                 </View>
               </View>
             </View>
           </View>
         </View>
+
+        {/* Meal Tracker */}
         <View style={styles.section}>
-          {/*Label*/}
           <Text style={styles.sectionLabel}>Meal Tracker</Text>
           <View style={styles.cardWrapper}>
             <View
@@ -139,19 +256,12 @@ export default function Nutrition() {
                 },
               ]}
             >
-              <Text
-                style={[
-                  styles.text,
-                  {
-                    fontSize: 16,
-                    fontWeight: "900",
-                  },
-                ]}
-              >
+              <Text style={[styles.text, { fontSize: 16, fontWeight: "900" }]}>
                 LOG FOOD
               </Text>
             </View>
             <TouchableOpacity
+              onPress={() => setModalVisible(true)}
               style={[
                 styles.card,
                 {
@@ -167,19 +277,131 @@ export default function Nutrition() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Recent Meals */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Recent Meals</Text>
+          {logs.length === 0 ? (
+            <Text style={[styles.text, { marginTop: 8, opacity: 0.5 }]}>
+              No meals logged today.
+            </Text>
+          ) : (
+            logs.map((log) => (
+              <View
+                key={log.id}
+                style={[
+                  styles.card,
+                  {
+                    width: "100%",
+                    height: "auto",
+                    padding: 12,
+                    marginVertical: 4,
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  },
+                ]}
+              >
+                <View>
+                  <Text
+                    style={[
+                      styles.text,
+                      {
+                        fontWeight: "700",
+                        fontSize: 14,
+                        color: colors.textPrimary,
+                      },
+                    ]}
+                  >
+                    {log.food_name}
+                  </Text>
+                  <Text style={styles.text}>
+                    {log.calories} kcal · P: {log.protein}g · C: {log.carbs}g ·
+                    F: {log.fats}g
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => handleDeleteLog(log.id)}>
+                  <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                </TouchableOpacity>
+              </View>
+            ))
+          )}
         </View>
-      </View>
+      </ScrollView>
+
+      {/* Log Food Modal */}
+      <Modal visible={modalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.headerText}>Search Food</Text>
+            <View style={styles.searchBar}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="e.g. chicken breast"
+                placeholderTextColor="#666"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                onSubmitEditing={handleSearch}
+              />
+              <TouchableOpacity onPress={handleSearch}>
+                <Ionicons name="search" size={20} color="white" />
+              </TouchableOpacity>
+            </View>
+
+            {searching ? (
+              <ActivityIndicator size="small" color={colors.accent} />
+            ) : (
+              <FlatList
+                data={searchResults}
+                keyExtractor={(_, i) => i.toString()}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    onPress={() => handleLogFood(item)}
+                    style={styles.resultItem}
+                  >
+                    <View>
+                      <Text
+                        style={[
+                          styles.text,
+                          { fontWeight: "700", color: colors.textPrimary },
+                        ]}
+                      >
+                        {item.food_name || "Unknown"}
+                      </Text>
+                      <Text style={styles.text}>
+                        {item.calories} kcal · P: {item.protein}g · C:{" "}
+                        {item.carbs}g · F: {item.fats}g
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name="add-circle-outline"
+                      size={24}
+                      color={colors.accent}
+                    />
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+
+            <TouchableOpacity
+              onPress={() => {
+                setModalVisible(false);
+                setSearchResults([]);
+                setSearchQuery("");
+              }}
+              style={styles.closeButton}
+            >
+              <Text style={{ color: "white", fontWeight: "700" }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.secondary,
-  },
+  container: { flex: 1, backgroundColor: colors.secondary },
   main: {
     flex: 1,
     backgroundColor: colors.primary,
@@ -187,51 +409,21 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     minHeight: "100%",
   },
-  header: {
-    marginTop: 12,
-    marginBottom: 6,
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 24,
-  },
   headerText: {
     color: colors.textPrimary,
     fontSize: 18,
     letterSpacing: 0.5,
-    fontWeight: 800,
+    fontWeight: "800",
   },
-
-  summaryContainer: {
-    flex: 1,
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  summaryLeft: {
-    flexDirection: "column",
-    alignItems: "center",
-    gap: 8,
-  },
-  summaryRight: {
-    flex: 1,
-    flexDirection: "column",
-    justifyContent: "center",
-  },
-  section: {
-    marginVertical: 6,
-  },
+  section: { marginVertical: 6 },
   sectionLabel: {
     fontSize: 13,
     opacity: 0.8,
     letterSpacing: 0.5,
     color: "#ffffff",
-    width: 100,
     fontWeight: "500",
   },
-  cardWrapper: {
-    flexDirection: "row",
-    marginVertical: 6,
-    gap: "2%",
-  },
+  cardWrapper: { flexDirection: "row", marginVertical: 6, gap: 8 },
   card: {
     backgroundColor: colors.tertiary,
     width: 285,
@@ -243,6 +435,43 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 12,
     letterSpacing: 0.5,
-    fontWeight: 300,
+    fontWeight: "300",
+  },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: colors.secondary,
+    borderRadius: 8,
+    padding: 10,
+    marginVertical: 12,
+  },
+  searchInput: { flex: 1, color: "white" },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: colors.primary,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 20,
+    maxHeight: "80%",
+  },
+  resultItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.tertiary,
+  },
+  closeButton: {
+    marginTop: 12,
+    backgroundColor: colors.tertiary,
+    borderRadius: 8,
+    padding: 12,
+    alignItems: "center",
   },
 });
