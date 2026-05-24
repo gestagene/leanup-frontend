@@ -1,0 +1,16 @@
+import { Stack } from "expo-router";
+
+export default function WorkoutLayout() {
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen
+        name="session"
+        options={{
+          headerShown: false,
+          animation: "slide_from_bottom",
+          gestureEnabled: false,
+        }}
+      />
+    </Stack>
+  );
+}
