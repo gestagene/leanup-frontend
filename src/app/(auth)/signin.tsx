@@ -1,12 +1,14 @@
 import ErrorMessage from "@/components/ErrorMessage";
 import { colors } from "@/constants/colorscheme";
 import { authService } from "@/services/auth.service";
+import { progressService } from "@/services/progress.service";
 import { userService } from "@/services/user.service";
 import type { UserCredentials } from "@/types/user.types";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   StyleSheet,
   Text,
   TextInput,
@@ -30,14 +32,16 @@ export default function Login() {
       await authService.signIn(credentials.email, credentials.password);
       const session = await authService.getSession();
       if (!session) throw new Error("Session Timeout");
-      await userService.getProfile(session.user.id);
-      router.replace("/Home");
+      await userService.getProfile();
+      await progressService.checkin(); // add this
+      router.replace("/(tabs)/Home");
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.headerContainer}>
@@ -80,22 +84,25 @@ export default function Login() {
           </TouchableOpacity>
         </View>
         <View style={styles.buttonContainer}>
-          <TouchableOpacity onPress={handleLogin} style={styles.button}>
-            <Text
-              adjustsFontSizeToFit
-              numberOfLines={1}
-              style={styles.buttonText}
-            >
-              Login
-            </Text>
+          <TouchableOpacity
+            onPress={handleLogin}
+            style={[styles.button, { opacity: loading ? 0.5 : 1 }]}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color={"#ffffff"} />
+            ) : (
+              <Text
+                adjustsFontSizeToFit
+                numberOfLines={1}
+                style={styles.buttonText}
+              >
+                Login
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
         <View>
           <ErrorMessage message={error} />
-        </View>
-        <View style={styles.horizontalRule}></View>
-        <View>
-          <Text style={styles.or}>OR</Text>
         </View>
       </View>
     </SafeAreaView>
