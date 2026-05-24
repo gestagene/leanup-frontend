@@ -2,7 +2,13 @@ import CalorieRing from "@/components/CalorieRing";
 import Header from "@/components/Header";
 import ProgressBar from "@/components/ProgressBar";
 import { colors } from "@/constants/colorscheme";
+import { useTdee } from "@/hooks/useTdee";
 import { nutritionService } from "@/services/nutrition.service";
+import {
+  FoodSearchResult,
+  MealLog,
+  NutritionSummary,
+} from "@/types/nutrition.types";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useEffect, useState } from "react";
 import {
@@ -18,36 +24,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-type NutritionSummary = {
-  total_calories: number;
-  total_protein: number;
-  total_carbs: number;
-  total_fats: number;
-};
-
-type FoodSearchResult = {
-  food_name: string;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fats: number;
-};
-
-type MealLog = {
-  id: string;
-  food_name: string;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fats: number;
-  meal_type: string;
-  logged_at: string;
-};
-
-const CALORIE_GOAL = 2000;
-const MACRO_GOALS = { protein: 145, carbs: 200, fats: 65 };
-
 export default function Nutrition() {
+  const { tdee } = useTdee();
   const [summary, setSummary] = useState<NutritionSummary>({
     total_calories: 0,
     total_protein: 0,
@@ -61,6 +39,9 @@ export default function Nutrition() {
   const [searchResults, setSearchResults] = useState<FoodSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [logging, setLogging] = useState(false);
+  const [error, setError] = useState("");
+
+  const calorieGoal = tdee.target_calories;
 
   const fetchData = async () => {
     try {
@@ -87,8 +68,8 @@ export default function Nutrition() {
       setSearching(true);
       const data = await nutritionService.searchFood(searchQuery);
       setSearchResults(data.results);
-    } catch (error) {
-      console.error("Search failed:", error);
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setSearching(false);
     }
@@ -135,7 +116,7 @@ export default function Nutrition() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header content="CALORIES" />
+      <Header content="Calories" />
       <ScrollView style={styles.main}>
         <View style={{ marginTop: 12, marginBottom: 5, marginHorizontal: 6 }}>
           <Text style={styles.headerText}>Nutrition Overview</Text>
@@ -199,7 +180,7 @@ export default function Nutrition() {
           >
             <CalorieRing
               calories={summary.total_calories}
-              maxCalories={CALORIE_GOAL}
+              maxCalories={tdee.target_calories}
               protein={summary.total_protein}
               carbs={summary.total_carbs}
               fats={summary.total_fats}
@@ -208,30 +189,30 @@ export default function Nutrition() {
               <View style={{ marginVertical: 8 }}>
                 <View style={styles.section}>
                   <Text style={[styles.text, { marginBottom: 4 }]}>
-                    {summary.total_protein}g / {MACRO_GOALS.protein}g
+                    {summary.total_protein}g / {tdee.target_protein}g
                   </Text>
                   <ProgressBar
-                    target={MACRO_GOALS.protein}
+                    target={tdee.target_protein}
                     value={summary.total_protein}
                     color={"#3B82F6"}
                   />
                 </View>
                 <View style={styles.section}>
                   <Text style={[styles.text, { marginBottom: 4 }]}>
-                    {summary.total_carbs}g / {MACRO_GOALS.carbs}g
+                    {summary.total_carbs}g / {tdee.target_carbs}g
                   </Text>
                   <ProgressBar
-                    target={MACRO_GOALS.carbs}
+                    target={tdee.target_carbs}
                     value={summary.total_carbs}
                     color={"#F59E0B"}
                   />
                 </View>
                 <View style={[styles.section, { gap: 2 }]}>
                   <Text style={[styles.text, { marginBottom: 4 }]}>
-                    {summary.total_fats}g / {MACRO_GOALS.fats}g
+                    {summary.total_fats}g / {tdee.target_fats}g
                   </Text>
                   <ProgressBar
-                    target={MACRO_GOALS.fats}
+                    target={tdee.target_fats}
                     value={summary.total_fats}
                     color={"#EF4444"}
                   />
@@ -321,7 +302,7 @@ export default function Nutrition() {
                   </Text>
                 </View>
                 <TouchableOpacity onPress={() => handleDeleteLog(log.id)}>
-                  <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                  <Ionicons name="trash-outline" size={24} color="#EF4444" />
                 </TouchableOpacity>
               </View>
             ))
@@ -343,13 +324,13 @@ export default function Nutrition() {
                 onChangeText={setSearchQuery}
                 onSubmitEditing={handleSearch}
               />
-              <TouchableOpacity onPress={handleSearch}>
-                <Ionicons name="search" size={20} color="white" />
+              <TouchableOpacity style={{ padding: 6 }} onPress={handleSearch}>
+                <Ionicons name="search" size={24} color="white" />
               </TouchableOpacity>
             </View>
 
             {searching ? (
-              <ActivityIndicator size="small" color={colors.accent} />
+              <ActivityIndicator size="large" color={colors.accent} />
             ) : (
               <FlatList
                 data={searchResults}
