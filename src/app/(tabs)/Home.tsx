@@ -2,12 +2,21 @@ import CalorieRing from "@/components/CalorieRing";
 import Header from "@/components/Header";
 import ProgressBar from "@/components/ProgressBar";
 import { colors } from "@/constants/colorscheme";
-import Entypo from "@expo/vector-icons/Entypo";
+import { useHealthConnect } from "@/hooks/useHealthConnect";
+import { useProfile } from "@/hooks/useProfile";
+import { useTdee } from "@/hooks/useTdee";
+import { nutritionService } from "@/services/nutrition.service";
+import { progressService } from "@/services/progress.service";
+import { userService } from "@/services/user.service";
+import type { NutritionSummary } from "@/types/nutrition.types";
+import Feather from "@expo/vector-icons/Feather";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { useState } from "react";
+import { router } from "expo-router";
+import { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,17 +25,84 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+type UserProfile = {
+  name: string;
+  goal: string;
+};
+
+const FITNESS_TIPS = [
+  "Train each muscle group 2× per week for faster growth.",
+  "Sleep 7-9 hours — muscle is built during recovery, not training.",
+  "Progressive overload: add weight or reps each week to keep growing.",
+  "Protein synthesis peaks 24-48 hours after training. Stay consistent.",
+  "Dehydration of just 2% body weight can reduce performance by 10%.",
+  "Compound lifts (squat, deadlift, bench) give you the most bang for your buck.",
+  "Rest 48-72 hours before training the same muscle group again.",
+  "Eating protein before bed helps overnight muscle recovery.",
+  "Warm up for 5-10 minutes to reduce injury risk and improve performance.",
+  "Consistency beats intensity — showing up regularly matters more than perfect workouts.",
+];
+
+const STEP_GOAL = 10000;
+
 export default function Home() {
+  const { profile, streak } = useProfile();
   const [activeCard, setActiveCard] = useState(0);
   const [cups, setCups] = useState(0);
+  const [summary, setSummary] = useState<NutritionSummary>({
+    total_calories: 0,
+    total_protein: 0,
+    total_carbs: 0,
+    total_fats: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  const { steps, activeCalories, hasPermission } = useHealthConnect();
+  const { tdee } = useTdee();
+
+  const tip = useMemo(
+    () => FITNESS_TIPS[Math.floor(Math.random() * FITNESS_TIPS.length)],
+    [],
+  );
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [summaryData, profileData] = await Promise.all([
+          nutritionService.getTodaySummary(),
+          userService.getProfile(),
+          progressService.getStreak(),
+        ]);
+        setSummary(summaryData);
+        progressService.getStreak();
+      } catch (error) {
+        console.error("Failed to fetch home data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ActivityIndicator size="large" color={colors.accent} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header content="tempo" />
+      <Header
+        content={`🔥 ${streak} day${streak !== 1 ? "s" : ""}`}
+        initial={profile?.name}
+      />
       <ScrollView showsVerticalScrollIndicator={false} style={styles.main}>
         <View style={{ marginTop: 12, marginBottom: 5, marginHorizontal: 6 }}>
           <Text style={styles.headerText}>Daily Summary</Text>
         </View>
+
         <ScrollView
           horizontal
           pagingEnabled
@@ -36,20 +112,10 @@ export default function Home() {
             setActiveCard(index);
           }}
           scrollEventThrottle={16}
-          contentContainerStyle={{
-            gap: 10,
-          }}
+          contentContainerStyle={{ gap: 10 }}
         >
-          <View
-            style={[
-              styles.card,
-              {
-                width: 300,
-                padding: 12,
-              },
-            ]}
-          >
-            {/*Texts*/}
+          {/* Calories Card */}
+          <View style={[styles.card, { width: 300, padding: 12 }]}>
             <View>
               <Text style={[styles.headerText, { textAlign: "left" }]}>
                 Calories
@@ -58,7 +124,6 @@ export default function Home() {
                 Remaining = Goal - Calories
               </Text>
             </View>
-            {/*Graphs*/}
             <View
               style={{
                 justifyContent: "space-around",
@@ -67,15 +132,13 @@ export default function Home() {
                 flexDirection: "row",
               }}
             >
-              <View>
-                <CalorieRing
-                  calories={1000}
-                  maxCalories={1500}
-                  protein={20}
-                  carbs={20}
-                  fats={20}
-                />
-              </View>
+              <CalorieRing
+                calories={summary.total_calories}
+                maxCalories={tdee.target_calories}
+                protein={summary.total_protein}
+                carbs={summary.total_carbs}
+                fats={summary.total_fats}
+              />
               <View style={{ gap: 8 }}>
                 <View
                   style={{ flexDirection: "row", gap: 8, alignItems: "center" }}
@@ -83,7 +146,9 @@ export default function Home() {
                   <Ionicons name="flag" size={24} color={"#3B82F6"} />
                   <View style={{ flexDirection: "column", gap: 2 }}>
                     <Text style={styles.text}>Base Goal</Text>
-                    <Text style={[styles.text, { fontWeight: "900" }]}>0</Text>
+                    <Text style={[styles.text, { fontWeight: "900" }]}>
+                      {tdee.target_calories}
+                    </Text>
                   </View>
                 </View>
                 <View
@@ -92,22 +157,34 @@ export default function Home() {
                   <FontAwesome6 name="utensils" size={24} color={"#FB923C"} />
                   <View style={{ flexDirection: "column", gap: 2 }}>
                     <Text style={styles.text}>Food</Text>
-                    <Text style={[styles.text, { fontWeight: "900" }]}>0</Text>
+                    <Text style={[styles.text, { fontWeight: "900" }]}>
+                      {summary.total_calories}
+                    </Text>
                   </View>
                 </View>
+                {hasPermission && activeCalories > 0 && (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      gap: 8,
+                      alignItems: "center",
+                    }}
+                  >
+                    <Ionicons name="flame" size={24} color={"#EF4444"} />
+                    <View style={{ flexDirection: "column", gap: 2 }}>
+                      <Text style={styles.text}>Active</Text>
+                      <Text style={[styles.text, { fontWeight: "900" }]}>
+                        {activeCalories}
+                      </Text>
+                    </View>
+                  </View>
+                )}
               </View>
             </View>
           </View>
-          <View
-            style={[
-              styles.card,
-              {
-                width: 300,
-                padding: 12,
-              },
-            ]}
-          >
-            {/*Text*/}
+
+          {/* Macros Card */}
+          <View style={[styles.card, { width: 300, padding: 12 }]}>
             <View
               style={{
                 flexDirection: "row",
@@ -115,94 +192,69 @@ export default function Home() {
                 justifyContent: "space-around",
               }}
             >
-              <View>
-                <Text style={[styles.headerText, { textAlign: "left" }]}>
-                  Macros
-                </Text>
-              </View>
-              {/*legend*/}
-              <View
-                style={{
-                  flexDirection: "row",
-                  gap: 8,
-                }}
-              >
-                <View
-                  style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
-                >
+              <Text style={[styles.headerText, { textAlign: "left" }]}>
+                Macros
+              </Text>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                {[
+                  { label: "Protein", color: "#3B82F6" },
+                  { label: "Carbs", color: "#F59E0B" },
+                  { label: "Fats", color: "#EF4444" },
+                ].map(({ label, color }) => (
                   <View
+                    key={label}
                     style={{
-                      height: 3,
-                      width: 3,
-                      backgroundColor: "#3B82F6",
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 4,
                     }}
-                  ></View>
-                  <Text
-                    style={[
-                      styles.text,
-                      { fontWeight: "600", color: "#3B82F6" },
-                    ]}
                   >
-                    Protein
-                  </Text>
-                </View>
-                <View
-                  style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
-                >
-                  <View
-                    style={{
-                      height: 3,
-                      width: 3,
-                      backgroundColor: "#F59E0B",
-                    }}
-                  ></View>
-                  <Text
-                    style={[
-                      styles.text,
-                      { fontWeight: "600", color: "#F59E0B" },
-                    ]}
-                  >
-                    Carbs
-                  </Text>
-                </View>
-                <View
-                  style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
-                >
-                  <View
-                    style={{
-                      height: 3,
-                      width: 3,
-                      backgroundColor: "#EF4444",
-                    }}
-                  ></View>
-                  <Text
-                    style={[
-                      styles.text,
-                      { fontWeight: "600", color: "#EF4444" },
-                    ]}
-                  >
-                    Fats
-                  </Text>
-                </View>
+                    <View
+                      style={{ height: 3, width: 3, backgroundColor: color }}
+                    />
+                    <Text style={[styles.text, { fontWeight: "600", color }]}>
+                      {label}
+                    </Text>
+                  </View>
+                ))}
               </View>
             </View>
-
             <View style={{ marginVertical: 8 }}>
-              <View style={[styles.section]}>
-                <Text style={[styles.text, { marginBottom: 4 }]}>0 / 145</Text>
-                <ProgressBar target={8} value={cups} color={"#3B82F6"} />
+              <View style={styles.section}>
+                <Text style={[styles.text, { marginBottom: 4 }]}>
+                  {summary.total_protein}g / {tdee.target_protein}g
+                </Text>
+                <ProgressBar
+                  target={tdee.target_protein}
+                  value={summary.total_protein}
+                  color={"#3B82F6"}
+                />
               </View>
-              <View style={[styles.section]}>
-                <Text style={[styles.text, { marginBottom: 4 }]}>0</Text>
-                <ProgressBar target={8} value={cups} color={"#F59E0B"} />
+              <View style={styles.section}>
+                <Text style={[styles.text, { marginBottom: 4 }]}>
+                  {summary.total_carbs}g / {tdee.target_carbs}g
+                </Text>
+                <ProgressBar
+                  target={tdee.target_carbs}
+                  value={summary.total_carbs}
+                  color={"#F59E0B"}
+                />
               </View>
               <View style={[styles.section, { gap: 2 }]}>
-                <Text style={[styles.text, { marginBottom: 4 }]}>0</Text>
-                <ProgressBar target={2} value={cups} color={"#EF4444"} />
+                <Text style={[styles.text, { marginBottom: 4 }]}>
+                  {summary.total_fats}g / {tdee.target_fats}g
+                </Text>
+                <ProgressBar
+                  target={tdee.target_fats}
+                  value={summary.total_fats}
+                  color={"#EF4444"}
+                />
               </View>
             </View>
           </View>
         </ScrollView>
+
+        {/* Pagination dots */}
         <View
           style={[
             styles.section,
@@ -226,16 +278,20 @@ export default function Home() {
             />
           ))}
         </View>
-        <View style={[styles.section]}>
+
+        {/* Tip */}
+        <View style={styles.section}>
           <Text
             adjustsFontSizeToFit
             numberOfLines={1}
             style={[styles.text, { textAlign: "center" }]}
           >
-            Train each muscle group 2× per week for faster growth.
+            Tip: {tip}
           </Text>
         </View>
+
         <View style={styles.section}>
+          {/* Workout Plan */}
           <View
             style={[
               styles.card,
@@ -253,10 +309,15 @@ export default function Home() {
             <Text style={[styles.headerText, { fontStyle: "italic" }]}>
               Today's Workout Plan
             </Text>
-            <TouchableOpacity style={styles.button}>
-              <Entypo name="eye" size={24} color="white" />
+            <TouchableOpacity
+              onPress={() => router.push("/(tabs)/Workout")}
+              style={styles.button}
+            >
+              <Feather name="arrow-up-right" size={24} color="white" />
             </TouchableOpacity>
           </View>
+
+          {/* Water + Steps */}
           <View
             style={[
               styles.section,
@@ -293,10 +354,9 @@ export default function Home() {
                   }
                   style={[styles.button, { backgroundColor: "transparent" }]}
                 >
-                  <Ionicons name="add" size={24} color="white" />
+                  <Ionicons name="add" size={16} color="white" />
                 </TouchableOpacity>
               </View>
-
               <View
                 style={{
                   flexDirection: "row",
@@ -307,12 +367,7 @@ export default function Home() {
                 }}
               >
                 <FontAwesome6 name="glass-water" size={24} color="#21547D" />
-                <View
-                  style={{
-                    flexDirection: "row",
-                    gap: 6,
-                  }}
-                >
+                <View style={{ flexDirection: "row", gap: 6 }}>
                   <Text
                     style={[styles.headerText, { opacity: 0.65, fontSize: 16 }]}
                   >
@@ -325,8 +380,11 @@ export default function Home() {
                   </Text>
                 </View>
               </View>
-              <ProgressBar target={8} value={cups} color={"#21547D"} />
+              <View style={{ paddingTop: 10 }}>
+                <ProgressBar target={8} value={cups} color={"#21547D"} />
+              </View>
             </View>
+
             {/* Steps */}
             <View
               style={[
@@ -340,7 +398,6 @@ export default function Home() {
               ]}
             >
               <Text style={[styles.headerText, { fontSize: 16 }]}>Steps</Text>
-
               <View
                 style={{
                   flexDirection: "row",
@@ -356,25 +413,35 @@ export default function Home() {
                   color="#BD4040"
                   style={{ transform: [{ rotate: "-15deg" }] }}
                 />
-                <View
-                  style={{
-                    flexDirection: "row",
-                    gap: 4,
-                  }}
-                >
+                <View style={{ flexDirection: "row", gap: 4 }}>
                   <Text
                     style={[styles.headerText, { opacity: 0.65, fontSize: 16 }]}
                   >
-                    0
+                    {hasPermission ? steps.toLocaleString() : "--"}
                   </Text>
                   <Text
                     style={[styles.headerText, { opacity: 0.65, fontSize: 16 }]}
                   >
-                    / 10,000
+                    / {STEP_GOAL.toLocaleString()}
                   </Text>
                 </View>
               </View>
-              <ProgressBar target={10000} value={cups} />
+              <View style={{ paddingTop: hasPermission ? 10 : 0 }}>
+                {hasPermission ? (
+                  <ProgressBar target={STEP_GOAL} value={steps} />
+                ) : (
+                  <Text
+                    adjustsFontSizeToFit
+                    numberOfLines={1}
+                    style={[
+                      styles.text,
+                      { opacity: 0.5, fontSize: 10, textAlign: "center" },
+                    ]}
+                  >
+                    Enable Health Connect to track steps
+                  </Text>
+                )}
+              </View>
             </View>
           </View>
         </View>
@@ -384,20 +451,7 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.secondary,
-  },
-  headerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottomWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    backgroundColor: colors.secondary,
-  },
+  container: { flex: 1, backgroundColor: colors.secondary },
   main: {
     flex: 1,
     backgroundColor: colors.primary,
@@ -409,13 +463,13 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 18,
     letterSpacing: 0.5,
-    fontWeight: 800,
+    fontWeight: "800",
   },
   text: {
     color: colors.textSecondary,
     fontSize: 12,
     letterSpacing: 0.5,
-    fontWeight: 300,
+    fontWeight: "500",
   },
   card: {
     backgroundColor: colors.tertiary,
@@ -424,9 +478,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginVertical: 4,
   },
-  section: {
-    marginVertical: 8,
-  },
+  section: { marginVertical: 8 },
   button: {
     backgroundColor: colors.accent,
     borderRadius: 100,
