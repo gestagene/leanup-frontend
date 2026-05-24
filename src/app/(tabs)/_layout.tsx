@@ -1,13 +1,26 @@
 import { colors } from "@/constants/colorscheme";
+import { progressService } from "@/services/progress.service";
 import Entypo from "@expo/vector-icons/Entypo";
-import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Tabs } from "expo-router";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { useEffect } from "react";
+import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    const dailyCheckin = async () => {
+      try {
+        await progressService.checkin();
+      } catch (err) {
+        // silently fail — don't block the app if checkin fails
+      }
+    };
+    dailyCheckin();
+  }, []);
+
   return (
     <View style={{ flex: 1 }}>
       <Tabs
@@ -48,7 +61,6 @@ export default function TabLayout() {
             ),
           }}
         />
-
         <Tabs.Screen
           name="Chat"
           options={{
@@ -72,7 +84,6 @@ export default function TabLayout() {
             ),
           }}
         />
-
         <Tabs.Screen
           name="Nutrition"
           options={{
@@ -100,26 +111,6 @@ export default function TabLayout() {
           }}
         />
       </Tabs>
-
-      <TouchableOpacity style={styles.fab}>
-        <FontAwesome6 name="add" size={24} color="white" />
-      </TouchableOpacity>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  fab: {
-    position: "absolute",
-    bottom: "15%",
-    right: "5%",
-    width: 50,
-    height: 50,
-    borderRadius: 28,
-    backgroundColor: colors.accent,
-    alignItems: "center",
-    justifyContent: "center",
-    elevation: 5,
-    opacity: 0.7,
-  },
-});
